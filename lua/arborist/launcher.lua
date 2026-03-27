@@ -1,8 +1,45 @@
 local M = {}
 local api = vim.api
 
-function M.launch(branch, worktree_path, prompt)
+--- Open a task's terminal buffer in a float window using arborist's float config.
+local function open_task_float(task)
   local config = require("arborist.config").get()
+  local bufnr = task:get_bufnr()
+  if not bufnr or not api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+
+  local ui = api.nvim_list_uis()[1] or {}
+  local width = math.floor((ui.width or 80) * (config.float.width or 0.6))
+  local height = math.floor((ui.height or 24) * (config.float.height or 0.4))
+
+  local win = api.nvim_open_win(bufnr, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    col = math.floor(((ui.width or 80) - width) / 2),
+    row = math.floor(((ui.height or 24) - height) / 2),
+    style = "minimal",
+    border = config.float.border or "rounded",
+  })
+
+  -- Signal the terminal to redraw at the new size
+  api.nvim_win_call(win, function()
+    vim.cmd("startinsert")
+  end)
+
+  for _, mode in ipairs({ "n", "t" }) do
+    vim.keymap.set(mode, config.keys.close_float, function()
+      if api.nvim_win_is_valid(win) then
+        api.nvim_win_close(win, true)
+      end
+    end, { buffer = bufnr, desc = "Close Claude float" })
+  end
+end
+
+M.open_task_float = open_task_float
+
+function M.launch(branch, worktree_path, prompt)
   local overseer = require("overseer")
 
   overseer.run_template({
@@ -19,28 +56,12 @@ function M.launch(branch, worktree_path, prompt)
     end
 
     vim.defer_fn(function()
-      overseer.run_action(task, "open float")
-      vim.defer_fn(function()
-        local bufnr = task:get_bufnr()
-        if bufnr and api.nvim_buf_is_valid(bufnr) then
-          for _, mode in ipairs({ "n", "t" }) do
-            vim.keymap.set(mode, config.keys.close_float, function()
-              local win = vim.fn.bufwinid(bufnr)
-              if win ~= -1 then
-                api.nvim_win_close(win, true)
-              end
-            end, { buffer = bufnr, desc = "Close Claude float" })
-          end
-
-        end
-        vim.cmd("startinsert")
-      end, 100)
+      open_task_float(task)
     end, 300)
   end)
 end
 
 function M.pick_instance()
-  local config = require("arborist.config").get()
   local overseer = require("overseer")
   local tasks = overseer.list_tasks({ status = "RUNNING" })
   local claude_tasks = vim.tbl_filter(function(t)
@@ -61,21 +82,7 @@ function M.pick_instance()
     if not task then
       return
     end
-    overseer.run_action(task, "open float")
-    vim.defer_fn(function()
-      local bufnr = task:get_bufnr()
-      if bufnr and api.nvim_buf_is_valid(bufnr) then
-        for _, mode in ipairs({ "n", "t" }) do
-          vim.keymap.set(mode, config.keys.close_float, function()
-            local win = vim.fn.bufwinid(bufnr)
-            if win ~= -1 then
-              api.nvim_win_close(win, true)
-            end
-          end, { buffer = bufnr, desc = "Close Claude float" })
-        end
-      end
-      vim.cmd("startinsert")
-    end, 100)
+    open_task_float(task)
   end)
 end
 

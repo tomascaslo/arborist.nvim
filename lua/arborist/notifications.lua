@@ -21,24 +21,7 @@ function M.push(cwd, session_id)
 end
 
 local function open_task_float(task)
-  local config = require("arborist.config").get()
-  local overseer = require("overseer")
-
-  overseer.run_action(task, "open float")
-  vim.defer_fn(function()
-    local bufnr = task:get_bufnr()
-    if bufnr and api.nvim_buf_is_valid(bufnr) then
-      for _, mode in ipairs({ "n", "t" }) do
-        vim.keymap.set(mode, config.keys.close_float, function()
-          local win = vim.fn.bufwinid(bufnr)
-          if win ~= -1 then
-            api.nvim_win_close(win, true)
-          end
-        end, { buffer = bufnr, desc = "Close Claude float" })
-      end
-    end
-    vim.cmd("startinsert")
-  end, 100)
+  require("arborist.launcher").open_task_float(task)
 end
 
 function M.open_queue()
