@@ -49,6 +49,7 @@ return {
     end
 
     if params.prompt and params.prompt ~= "" then
+      table.insert(args, "-p")
       table.insert(args, params.prompt)
     end
 
