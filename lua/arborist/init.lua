@@ -1,5 +1,7 @@
 local M = {}
 
+M.version = require("arborist.version")
+
 function M.setup(opts)
   local config = require("arborist.config")
   config.setup(opts)
@@ -49,10 +51,8 @@ function M.setup(opts)
     end)
   end, { nargs = "*", desc = "Create worktree via wt + launch Claude" })
 
-  -- :ArboristInstall — install the Stop hook into ~/.claude/settings.json
-  api.nvim_create_user_command("ArboristInstall", function()
-    M.install_hook()
-  end, { desc = "Install Claude Code Stop hook for notifications" })
+  -- Generate settings file with Stop hook for --settings flag
+  M._write_settings()
 
   -- Keymaps
   vim.keymap.set("n", cfg.keys.worktrees, worktrees.fzf_picker, { desc = "Worktrees (fzf)" })
@@ -61,54 +61,38 @@ function M.setup(opts)
   vim.keymap.set("n", cfg.keys.notifications, notifications.open_queue, { desc = "Claude notifications" })
 end
 
---- Install the Stop hook into ~/.claude/settings.json and copy the hook script
-function M.install_hook()
-  -- Find the plugin's hooks directory
+--- Write a settings JSON file with the Stop hook for use with --settings flag.
+--- Called during setup() so the file is always up to date.
+function M._write_settings()
   local source = debug.getinfo(1, "S").source:sub(2)
   local plugin_root = vim.fn.fnamemodify(source, ":h:h:h")
-  local hook_source = plugin_root .. "/hooks/notify-nvim-stop.sh"
-  local hook_dest = vim.fn.expand("~/.claude/hooks/notify-nvim-stop.sh")
+  local hook_script = plugin_root .. "/hooks/notify-nvim-stop.sh"
 
-  -- Copy hook script
-  vim.fn.mkdir(vim.fn.expand("~/.claude/hooks"), "p")
-  vim.fn.system({ "cp", hook_source, hook_dest })
-  vim.fn.system({ "chmod", "+x", hook_dest })
+  -- Ensure hook script is executable
+  vim.fn.system({ "chmod", "+x", hook_script })
 
-  -- Update settings.json
-  local settings_path = vim.fn.expand("~/.claude/settings.json")
-  local settings = {}
-  local content = vim.fn.readfile(settings_path)
-  if #content > 0 then
-    local ok, parsed = pcall(vim.json.decode, table.concat(content, "\n"))
-    if ok then
-      settings = parsed
-    end
-  end
-
-  settings.hooks = settings.hooks or {}
-  settings.hooks.Stop = {
-    {
-      hooks = {
+  local settings = {
+    hooks = {
+      Stop = {
         {
-          type = "command",
-          command = hook_dest,
-          timeout = 5,
-          async = true,
+          hooks = {
+            {
+              type = "command",
+              command = hook_script,
+              timeout = 5,
+              async = true,
+            },
+          },
         },
       },
     },
   }
 
-  local json = vim.json.encode(settings)
-  -- Pretty print
-  local formatted = vim.fn.system("echo " .. vim.fn.shellescape(json) .. " | jq '.'")
-  if vim.v.shell_error == 0 then
-    vim.fn.writefile(vim.split(formatted, "\n"), settings_path)
-  else
-    vim.fn.writefile({ json }, settings_path)
-  end
+  local dir = vim.fn.stdpath("data") .. "/arborist"
+  vim.fn.mkdir(dir, "p")
 
-  vim.notify("Installed Stop hook at " .. hook_dest, vim.log.levels.INFO, { title = "arborist.nvim" })
+  M.settings_path = dir .. "/settings.json"
+  vim.fn.writefile({ vim.json.encode(settings) }, M.settings_path)
 end
 
 return M

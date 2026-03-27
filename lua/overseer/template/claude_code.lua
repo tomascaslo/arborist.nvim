@@ -40,6 +40,14 @@ return {
       table.insert(args, claude.effort)
     end
     vim.list_extend(args, tool_args())
+
+    -- Pass arborist settings (hooks) via --settings so we don't modify user config
+    local arborist = require("arborist")
+    if arborist.settings_path then
+      table.insert(args, "--settings")
+      table.insert(args, arborist.settings_path)
+    end
+
     if params.prompt and params.prompt ~= "" then
       table.insert(args, params.prompt)
     end
@@ -52,7 +60,7 @@ return {
       args = args,
       cwd = cwd,
       name = "claude:" .. branch,
-      strategy = { "terminal" },
+      strategy = { "jobstart" },
       metadata = { worktree_path = cwd },
       components = {
         "default",
