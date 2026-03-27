@@ -28,7 +28,7 @@ An arborist tends to trees — this plugin tends to your git worktrees, launchin
 
 ```lua
 {
-  "your-username/arborist.nvim",
+  "tomascaslo/arborist.nvim",
   dependencies = {
     "stevearc/overseer.nvim",
     "ibhagwan/fzf-lua",
