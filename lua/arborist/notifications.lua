@@ -12,10 +12,11 @@ function M.push(cwd, session_id)
     time = os.date("%H:%M:%S"),
   })
   local count = #M._queue
+  local config = require("arborist.config").get()
   vim.notify(
     string.format("Claude waiting [%s] (%d pending)", dirname, count),
     vim.log.levels.INFO,
-    { title = "arborist.nvim" }
+    { title = "arborist.nvim", timeout = config.notification_timeout }
   )
 end
 

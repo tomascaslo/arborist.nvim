@@ -54,6 +54,7 @@ M.defaults = {
       "Bash(git reset --hard *)",
     },
   },
+  notification_timeout = 3000, -- ms
   keys = {
     worktrees = "<leader>rw",     -- a[r]borist [w]orktrees
     new_worktree = "<leader>rn",  -- a[r]borist [n]ew
