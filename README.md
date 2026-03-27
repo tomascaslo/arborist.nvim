@@ -37,8 +37,8 @@ An arborist tends to trees — this plugin tends to your git worktrees, launchin
     require("arborist").setup({
       -- all options are optional, these are the defaults
       float = {
-        width = 0.6,
-        height = 0.4,
+        width = 0.85,
+        height = 0.8,
         border = "rounded",
       },
       claude = {
