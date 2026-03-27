@@ -31,6 +31,7 @@ function M.launch(branch, worktree_path, prompt)
               end
             end, { buffer = bufnr, desc = "Close Claude float" })
           end
+
         end
         vim.cmd("startinsert")
       end, 100)

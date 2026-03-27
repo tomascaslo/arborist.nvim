@@ -48,8 +48,8 @@ return {
       table.insert(args, arborist.settings_path)
     end
 
+
     if params.prompt and params.prompt ~= "" then
-      table.insert(args, "-p")
       table.insert(args, params.prompt)
     end
 
