@@ -2,7 +2,7 @@ local M = {}
 local api = vim.api
 
 --- Build the claude command args from config + params.
-local function build_cmd(prompt, worktree)
+local function build_cmd(prompt)
   local ok, config_mod = pcall(require, "arborist.config")
   local cfg = ok and config_mod.get() or {}
   local claude = cfg.claude or {}
@@ -42,8 +42,8 @@ end
 local function create_float()
   local config = require("arborist.config").get()
   local ui = api.nvim_list_uis()[1] or {}
-  local width = math.floor((ui.width or 80) * (config.float.width or 0.6))
-  local height = math.floor((ui.height or 24) * (config.float.height or 0.4))
+  local width = math.floor((ui.width or 80) * (config.float.width or 0.85))
+  local height = math.floor((ui.height or 24) * (config.float.height or 0.8))
 
   local buf = api.nvim_create_buf(false, true)
   local win = api.nvim_open_win(buf, true, {
@@ -71,9 +71,6 @@ local function setup_close_key(bufnr, win)
   end
 end
 
--- Track running Claude sessions for pick_instance and notifications
-M._sessions = {}
-
 --- Open a tracked session's float. Used by pick_instance and notifications.
 function M.open_task_float(session)
   if not session or not session.bufnr or not api.nvim_buf_is_valid(session.bufnr) then
@@ -88,51 +85,44 @@ function M.open_task_float(session)
 end
 
 function M.launch(branch, worktree_path, prompt)
+  local sessions = require("arborist.sessions")
   local buf, win = create_float()
-  local cmd = build_cmd(prompt, worktree_path)
-
+  local cmd = build_cmd(prompt)
   local cwd = worktree_path or vim.fn.getcwd()
 
   vim.fn.termopen(cmd, {
     cwd = cwd,
     on_exit = function()
-      -- Clean up session tracking
-      for i, s in ipairs(M._sessions) do
-        if s.bufnr == buf then
-          table.remove(M._sessions, i)
-          break
-        end
-      end
+      sessions.remove_by_bufnr(buf)
     end,
   })
 
   setup_close_key(buf, win)
   vim.cmd("startinsert")
 
-  local session = {
+  sessions.add({
     name = "claude:" .. (branch or vim.fn.fnamemodify(cwd, ":t")),
     bufnr = buf,
     worktree_path = cwd,
     branch = branch,
-  }
-  table.insert(M._sessions, session)
+    state = "running",
+  })
 end
 
 function M.pick_instance()
-  -- Filter to sessions with valid buffers
-  M._sessions = vim.tbl_filter(function(s)
-    return s.bufnr and api.nvim_buf_is_valid(s.bufnr)
-  end, M._sessions)
+  local sessions = require("arborist.sessions")
+  local all = sessions.get_all()
 
-  if #M._sessions == 0 then
+  if #all == 0 then
     vim.notify("No running Claude instances", vim.log.levels.INFO)
     return
   end
 
-  vim.ui.select(M._sessions, {
+  vim.ui.select(all, {
     prompt = "Claude instances:",
     format_item = function(s)
-      return s.name
+      local state = s.state or "idle"
+      return s.name .. "  [" .. state .. "]"
     end,
   }, function(session)
     if not session then

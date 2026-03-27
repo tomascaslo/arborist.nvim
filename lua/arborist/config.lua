@@ -61,6 +61,7 @@ M.defaults = {
     pick_instance = "<leader>ri", -- a[r]borist [i]nstance
     notifications = "<leader>rq", -- a[r]borist [q]ueue
     submit_prompt = "<leader>rs", -- a[r]borist [s]ubmit
+    session_view = "<leader>rv",  -- a[r]borist [v]iew
     close_float = "<C-q>",
   },
 }

@@ -2,25 +2,28 @@
 
 Manage multiple [Claude Code](https://claude.ai/claude-code) sessions across git worktrees from inside Neovim.
 
-An arborist tends to trees — this plugin tends to your git worktrees, launching and orchestrating Claude Code instances via [Overseer](https://github.com/stevearc/overseer.nvim) with an interactive fzf picker, floating prompt editor, and a notification queue that tells you when Claude needs your attention.
+An arborist tends to trees — this plugin tends to your git worktrees, launching and orchestrating Claude Code instances with an interactive fzf picker, floating prompt editor, live session dashboard, and a notification queue that tells you when Claude needs your attention.
 
 ## Features
 
 - **Worktree picker** — fzf-lua powered picker with live preview showing git status and recent commits
 - **Floating prompt editor** — write multi-line prompts with `@path` file/directory completion before launching Claude
-- **Overseer integration** — each Claude session is an Overseer task with a real terminal you can interact with
-- **Notification queue** — Claude Code's Stop hook pushes notifications to Neovim when Claude finishes and is waiting for input; select a notification to jump into that session
+- **Session dashboard** — vertical split view showing all active Claude sessions with live state (Running, Waiting for input)
+- **Hook system** — Lua-based hook handler (runs via `nvim -l`) handles Stop, PostToolUse, and Notification events
+- **Auto-reload buffers** — when Claude edits files, open buffers auto-reload via `checktime`
+- **Notification queue** — Claude's Stop hook pushes notifications when Claude finishes and is waiting for input
+- **Lualine integration** — statusline component showing active session count with waiting indicator
 - **Tool sandboxing** — configurable allowed/disallowed tools so Claude can't `rm -rf` or `git push` from worktree sessions
 - **Branch slugification** — `:ClaudeNew hello world` creates a `hello-world` worktree automatically
 
 ## Dependencies
 
 - [Neovim](https://neovim.io/) >= 0.10
-- [overseer.nvim](https://github.com/stevearc/overseer.nvim) — task runner
 - [fzf-lua](https://github.com/ibhagwan/fzf-lua) — fuzzy picker
 - [worktrunk (`wt`)](https://github.com/nicholasgasior/wt) — worktree CLI
 - [Claude Code (`claude`)](https://claude.ai/claude-code) — AI coding assistant
-- `jq` — JSON processing (used by the fzf preview and hook script)
+- `jq` — JSON processing (used by the fzf preview)
+- [lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) — *(optional)* for statusline component
 
 ## Installation
 
@@ -30,7 +33,6 @@ An arborist tends to trees — this plugin tends to your git worktrees, launchin
 {
   "tomascaslo/arborist.nvim",
   dependencies = {
-    "stevearc/overseer.nvim",
     "ibhagwan/fzf-lua",
   },
   config = function()
@@ -57,12 +59,14 @@ An arborist tends to trees — this plugin tends to your git worktrees, launchin
           "Bash(git reset --hard *)",
         },
       },
+      notification_timeout = 3000, -- ms
       keys = {
         worktrees = "<leader>rw",
         new_worktree = "<leader>rn",
         pick_instance = "<leader>ri",
         notifications = "<leader>rq",
         submit_prompt = "<leader>rs",
+        session_view = "<leader>rv",
         close_float = "<C-q>",
       },
     })
@@ -76,6 +80,20 @@ For local development / testing:
 { dir = "~/projects/arborist.nvim" }
 ```
 
+### Lualine
+
+Add the `arborist` component to your lualine config:
+
+```lua
+require("lualine").setup({
+  sections = {
+    lualine_x = { "arborist" },
+  },
+})
+```
+
+Shows an icon + session count when Claude sessions are active. Turns yellow when any session is waiting for input.
+
 ## Usage
 
 | Keymap | Action |
@@ -84,6 +102,7 @@ For local development / testing:
 | `<leader>rn` | Create new worktree + launch Claude |
 | `<leader>ri` | Pick a running Claude instance |
 | `<leader>rq` | Open notification queue |
+| `<leader>rv` | Toggle session dashboard |
 | `<C-q>` | Close Claude float (works in terminal mode) |
 
 ### Worktree picker actions
@@ -104,34 +123,49 @@ For local development / testing:
 | `q` / `Esc` | Cancel |
 | `@` | Trigger file/directory autocomplete |
 
+### Session dashboard
+
+| Key | Action |
+|-----|--------|
+| `enter` | Open session in floating terminal |
+| `r` | Refresh |
+| `q` | Close |
+
 ### Commands
 
 | Command | Description |
 |---------|-------------|
 | `:ClaudeNew [name]` | Create worktree + launch Claude. Slugifies names: `hello world` → `hello-world` |
-| `:OverseerRun Claude Code` | Launch Claude via Overseer directly (prompts for params) |
+| `:ClaudeSessions` | Toggle the session dashboard |
 
 ## How it works
 
 ```
 ┌──────────────┐     ┌───────────┐     ┌──────────────┐
-│  fzf picker  │────>│  prompt   │────>│   overseer   │
-│  (worktrees) │     │  (float)  │     │  (terminal)  │
+│  fzf picker  │────>│  prompt   │────>│  termopen()  │
+│  (worktrees) │     │  (float)  │     │  (float)     │
 └──────────────┘     └───────────┘     └──────┬───────┘
                                               │
                                     claude --model opus
-                                    --effort medium
-                                    --allowedTools ...
+                                    --settings arborist.json
                                               │
                                      ┌────────▼────────┐
                                      │  Claude Code    │
                                      │  (interactive)  │
                                      └────────┬────────┘
-                                              │ Stop hook
-                                     ┌────────▼────────┐
-                                     │  notification   │
-                                     │  queue (nvim)   │
-                                     └─────────────────┘
+                                              │ hooks (nvim -l)
+                           ┌──────────────────┼──────────────────┐
+                           │                  │                  │
+                  ┌────────▼────────┐ ┌───────▼───────┐ ┌───────▼───────┐
+                  │  Stop           │ │  PostToolUse  │ │  Notification │
+                  │  → "waiting"    │ │  → "running"  │ │  → vim.notify │
+                  │  → notify queue │ │  → checktime  │ │               │
+                  └────────┬────────┘ └───────────────┘ └───────────────┘
+                           │
+                  ┌────────▼────────┐     ┌─────────────┐
+                  │  session view   │     │   lualine   │
+                  │  (live state)   │     │  component  │
+                  └─────────────────┘     └─────────────┘
 ```
 
 ## License
