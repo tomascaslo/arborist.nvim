@@ -16,6 +16,7 @@ M.defaults = {
       "Grep",
       "Edit",
       "MultiEdit",
+      "Write",
       -- Go
       "Bash(go build *)",
       "Bash(go run *)",

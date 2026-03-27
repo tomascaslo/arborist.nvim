@@ -50,4 +50,10 @@ function M.open_queue()
   end)
 end
 
+function M.clear_for_cwd(cwd)
+  M._queue = vim.tbl_filter(function(n)
+    return n.cwd ~= cwd
+  end, M._queue)
+end
+
 return M

@@ -66,19 +66,25 @@ function M._do_render()
     table.insert(lines, "")
     table.insert(lines, "  No active sessions")
   else
-    for i, s in ipairs(all) do
+    for _, s in ipairs(all) do
       local info = get_state_info(s.state)
       local branch = s.branch or vim.fn.fnamemodify(s.worktree_path, ":t")
-      local line = string.format(" %s %-20s %s", info.icon, branch, info.text)
-      table.insert(lines, line)
-      -- Highlight the state portion
-      local state_start = #line - #info.text
+      -- Branch name on its own line
+      local branch_line = " " .. info.icon .. " " .. branch
+      table.insert(lines, branch_line)
+      -- State on the line below, indented
+      local state_line = "   " .. info.text
+      table.insert(lines, state_line)
+      -- Highlight the state line
+      local line_idx = #lines - 1 -- 0-indexed
       table.insert(highlights, {
-        line = i + 1, -- offset for header + separator
-        col = state_start,
-        end_col = #line,
+        line = line_idx,
+        col = 0,
+        end_col = #state_line,
         hl = info.hl,
       })
+      -- Blank line between sessions
+      table.insert(lines, "")
     end
   end
 
@@ -109,9 +115,14 @@ function M._setup_buffer(bufnr)
     local line = api.nvim_win_get_cursor(0)[1]
     local sessions = require("arborist.sessions")
     local all = sessions.get_all()
-    local idx = line - 2 -- offset for header + separator
+    -- Each session takes 3 lines (branch, state, blank). Header + separator = 2 lines offset.
+    local idx = math.floor((line - 2 - 1) / 3) + 1
     if idx >= 1 and idx <= #all then
-      require("arborist.launcher").open_task_float(all[idx])
+      local session = all[idx]
+      -- Clear matching notification from queue
+      local notifications = require("arborist.notifications")
+      notifications.clear_for_cwd(session.worktree_path)
+      require("arborist.launcher").open_task_float(session)
     end
   end, { buffer = bufnr, desc = "Open session float" })
 
