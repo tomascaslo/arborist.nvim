@@ -23,10 +23,37 @@ local function open_task_float(task)
     border = config.float.border or "rounded",
   })
 
-  -- Signal the terminal to redraw at the new size
-  api.nvim_win_call(win, function()
-    vim.cmd("startinsert")
-  end)
+  -- Force the terminal pty to match the float dimensions so the TUI re-renders
+  local chan = vim.bo[bufnr].channel
+  if chan and chan > 0 then
+    vim.fn.jobresize(chan, width, height)
+  end
+
+  -- Re-resize the pty whenever the Neovim UI or float is resized
+  api.nvim_create_autocmd("VimResized", {
+    buffer = bufnr,
+    callback = function()
+      if not api.nvim_win_is_valid(win) then
+        return true -- delete autocmd
+      end
+      local new_ui = api.nvim_list_uis()[1] or {}
+      local w = math.floor((new_ui.width or 80) * (config.float.width or 0.6))
+      local h = math.floor((new_ui.height or 24) * (config.float.height or 0.4))
+      api.nvim_win_set_config(win, {
+        relative = "editor",
+        width = w,
+        height = h,
+        col = math.floor(((new_ui.width or 80) - w) / 2),
+        row = math.floor(((new_ui.height or 24) - h) / 2),
+      })
+      local c = vim.bo[bufnr].channel
+      if c and c > 0 then
+        vim.fn.jobresize(c, w, h)
+      end
+    end,
+  })
+
+  vim.cmd("startinsert")
 
   for _, mode in ipairs({ "n", "t" }) do
     vim.keymap.set(mode, config.keys.close_float, function()
