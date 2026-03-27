@@ -128,8 +128,11 @@ Shows an icon + session count when Claude sessions are active. Turns yellow when
 | Key | Action |
 |-----|--------|
 | `enter` | Open session in floating terminal |
+| `ctrl-n` / `ctrl-p` | Navigate between sessions |
+| `x` | End session (keeps worktree) |
 | `r` | Refresh |
 | `q` | Close |
+| `?` | Show help |
 
 ### Commands
 
