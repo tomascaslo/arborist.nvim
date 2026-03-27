@@ -49,8 +49,8 @@ function M.setup(opts)
     end)
   end, { nargs = "*", desc = "Create worktree via wt + launch Claude" })
 
-  -- :ArboristInstallHook — install the Stop hook into ~/.claude/settings.json
-  api.nvim_create_user_command("ArboristInstallHook", function()
+  -- :ArboristInstall — install the Stop hook into ~/.claude/settings.json
+  api.nvim_create_user_command("ArboristInstall", function()
     M.install_hook()
   end, { desc = "Install Claude Code Stop hook for notifications" })
 

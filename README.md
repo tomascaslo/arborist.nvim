@@ -78,7 +78,7 @@ For local development / testing:
 
 ### Install the notification hook
 
-Run `:ArboristInstallHook` — this copies the hook script to `~/.claude/hooks/` and registers it in `~/.claude/settings.json`. Only needs to be done once per machine.
+Run `:ArboristInstall` — this copies the hook script to `~/.claude/hooks/` and registers it in `~/.claude/settings.json`. Only needs to be done once per machine.
 
 ## Usage
 
@@ -114,7 +114,7 @@ Run `:ArboristInstallHook` — this copies the hook script to `~/.claude/hooks/`
 |---------|-------------|
 | `:ClaudeNew [name]` | Create worktree + launch Claude. Slugifies names: `hello world` → `hello-world` |
 | `:OverseerRun Claude Code` | Launch Claude via Overseer directly (prompts for params) |
-| `:ArboristInstallHook` | Install the Claude Code Stop hook for notifications |
+| `:ArboristInstall` | Install the Claude Code Stop hook for notifications |
 
 ## How it works
 
