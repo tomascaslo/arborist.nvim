@@ -6,6 +6,7 @@ function M.add(session)
   session.state = session.state or "running"
   session.last_updated = os.time()
   table.insert(M._sessions, session)
+  M._notify_view()
 end
 
 function M.remove_by_bufnr(bufnr)
