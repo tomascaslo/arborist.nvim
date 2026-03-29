@@ -39,14 +39,13 @@ local function build_cmd(prompt)
 end
 
 --- Create a centered float window with a new buffer.
-local function create_float()
+local function create_float(title)
   local config = require("arborist.config").get()
   local ui = api.nvim_list_uis()[1] or {}
   local width = math.floor((ui.width or 80) * (config.float.width or 0.85))
   local height = math.floor((ui.height or 24) * (config.float.height or 0.8))
 
-  local buf = api.nvim_create_buf(false, true)
-  local win = api.nvim_open_win(buf, true, {
+  local win_opts = {
     relative = "editor",
     width = width,
     height = height,
@@ -54,7 +53,14 @@ local function create_float()
     row = math.floor(((ui.height or 24) - height) / 2),
     style = "minimal",
     border = config.float.border or "rounded",
-  })
+  }
+  if title then
+    win_opts.title = " " .. title .. " "
+    win_opts.title_pos = "center"
+  end
+
+  local buf = api.nvim_create_buf(false, true)
+  local win = api.nvim_open_win(buf, true, win_opts)
 
   return buf, win
 end
@@ -78,7 +84,8 @@ function M.open_task_float(session)
     return
   end
 
-  local _, win = create_float()
+  local title = session.branch or session.name
+  local _, win = create_float(title)
   api.nvim_win_set_buf(win, session.bufnr)
   setup_close_key(session.bufnr, win)
   vim.cmd("startinsert")
@@ -86,7 +93,8 @@ end
 
 function M.launch(branch, worktree_path, prompt)
   local sessions = require("arborist.sessions")
-  local buf, win = create_float()
+  local title = branch or vim.fn.fnamemodify(worktree_path or vim.fn.getcwd(), ":t")
+  local buf, win = create_float(title)
   local cmd = build_cmd(prompt)
   local cwd = worktree_path or vim.fn.getcwd()
 
@@ -117,7 +125,8 @@ function M.resume(session)
   end
 
   local sessions_mod = require("arborist.sessions")
-  local buf, win = create_float()
+  local title = session.branch or session.name
+  local buf, win = create_float(title)
   local cwd = session.worktree_path or vim.fn.getcwd()
 
   -- Build resume command with settings
