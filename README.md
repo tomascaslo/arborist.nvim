@@ -185,6 +185,14 @@ Disable with `persist_sessions = false` in setup.
                   └─────────────────┘     └─────────────┘
 ```
 
+## Tests
+
+Requires [plenary.nvim](https://github.com/nvim-lua/plenary.nvim).
+
+```bash
+nvim --headless -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/ {minimal_init = 'tests/minimal_init.lua'}"
+```
+
 ## License
 
 MIT
