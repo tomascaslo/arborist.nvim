@@ -23,7 +23,7 @@ function M.open(title, worktree_path, on_submit)
     border = float.border,
     title = " " .. title .. " ",
     title_pos = "center",
-    footer = " " .. config.keys.submit_prompt .. " submit | q close | @<path> file ref ",
+    footer = " " .. config.keys.submit_prompt .. " or :w submit | q close | @<path> file ref ",
     footer_pos = "center",
   })
 
@@ -150,12 +150,20 @@ function M.open(title, worktree_path, on_submit)
   ---------------------------------------------------------
   -- Keymaps
   ---------------------------------------------------------
-  vim.keymap.set("n", config.keys.submit_prompt, function()
+  local function submit()
     local lines = api.nvim_buf_get_lines(buf, 0, -1, false)
-    local prompt = vim.trim(table.concat(lines, "\n"))
+    local p = vim.trim(table.concat(lines, "\n"))
     api.nvim_win_close(win, true)
-    on_submit(prompt)
-  end, { buffer = buf, desc = "Submit prompt to Claude" })
+    on_submit(p)
+  end
+
+  vim.keymap.set("n", config.keys.submit_prompt, submit, { buffer = buf, desc = "Submit prompt to Claude" })
+
+  -- :w also submits the prompt
+  api.nvim_create_autocmd("BufWriteCmd", {
+    buffer = buf,
+    callback = submit,
+  })
 
   vim.keymap.set("n", "q", function()
     api.nvim_win_close(win, true)

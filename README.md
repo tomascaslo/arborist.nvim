@@ -121,7 +121,7 @@ Shows an icon + session count when Claude sessions are active. Turns yellow when
 
 | Key | Action |
 |-----|--------|
-| `<leader>rs` | Submit prompt |
+| `<leader>rs` / `:w` | Submit prompt |
 | `q` / `Esc` | Cancel |
 | `@` | Trigger file/directory autocomplete |
 

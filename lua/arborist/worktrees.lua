@@ -1,5 +1,14 @@
 local M = {}
 
+--- Run a command asynchronously via vim.system() and call on_done(ok, output).
+local function async_cmd(cmd, on_done)
+  vim.system(cmd, { text = true }, function(result)
+    vim.schedule(function()
+      on_done(result.code == 0, vim.trim(result.stdout or result.stderr or ""))
+    end)
+  end)
+end
+
 function M.resolve_path(branch)
   local json = vim.fn.system("wt list --format=json")
   local ok, trees = pcall(vim.json.decode, json)
@@ -14,18 +23,19 @@ function M.resolve_path(branch)
   return nil
 end
 
-local function dispose_claude_task(branch)
-  local ok, overseer = pcall(require, "overseer")
-  if not ok then
-    return
-  end
-  local tasks = overseer.list_tasks()
-  for _, t in ipairs(tasks) do
-    if t.name == "claude:" .. branch then
-      t:stop()
-      vim.defer_fn(function()
-        t:dispose()
-      end, 500)
+local function end_claude_session(branch)
+  local sessions = require("arborist.sessions")
+  for _, s in ipairs(sessions.get_all()) do
+    if s.name == "claude:" .. branch then
+      if s.bufnr and vim.api.nvim_buf_is_valid(s.bufnr) then
+        local chan = vim.bo[s.bufnr].channel
+        if chan and chan > 0 then
+          pcall(vim.fn.jobstop, chan)
+        end
+        pcall(vim.api.nvim_buf_delete, s.bufnr, { force = true })
+      end
+      sessions.remove_by_bufnr(s.bufnr)
+      break
     end
   end
 end
@@ -75,37 +85,42 @@ function M.fzf_picker()
           if not branch then
             return
           end
-          vim.fn.system("wt switch " .. vim.fn.shellescape(branch) .. " --no-cd")
-          local path = M.resolve_path(branch)
-          if path then
-            vim.cmd("cd " .. vim.fn.fnameescape(path))
-          end
+          async_cmd({ "wt", "switch", branch, "--no-cd" }, function(ok)
+            if not ok then
+              vim.notify("Failed to switch to " .. branch, vim.log.levels.ERROR)
+              return
+            end
+            local path = M.resolve_path(branch)
+            if path then
+              vim.cmd("cd " .. vim.fn.fnameescape(path))
+            end
+          end)
         end,
         ["ctrl-d"] = function(selected)
           local branch = selected[1]:match("^([^\t]+)")
-          local esc_branch = vim.fn.shellescape(branch)
 
-          local out = vim.fn.system("wt remove " .. esc_branch)
-          if vim.v.shell_error == 0 then
-            dispose_claude_task(branch)
-            vim.notify("Removed: " .. branch, vim.log.levels.INFO)
-            return
-          end
-
-          local err = vim.trim(out)
-          vim.notify(err, vim.log.levels.WARN, { title = "wt remove " .. branch })
-          vim.ui.select({ "Yes, force remove", "No, keep it" }, {
-            prompt = "Force remove " .. branch .. "?",
-          }, function(choice)
-            if choice and choice:match("^Yes") then
-              local force_out = vim.fn.system("wt remove " .. esc_branch .. " --force")
-              if vim.v.shell_error == 0 then
-                dispose_claude_task(branch)
-                vim.notify("Force removed: " .. branch, vim.log.levels.INFO)
-              else
-                vim.notify("Failed to remove:\n" .. vim.trim(force_out), vim.log.levels.ERROR)
-              end
+          async_cmd({ "wt", "remove", branch }, function(ok, output)
+            if ok then
+              end_claude_session(branch)
+              vim.notify("Removed: " .. branch, vim.log.levels.INFO)
+              return
             end
+
+            vim.notify(output, vim.log.levels.WARN, { title = "wt remove " .. branch })
+            vim.ui.select({ "Yes, force remove", "No, keep it" }, {
+              prompt = "Force remove " .. branch .. "?",
+            }, function(choice)
+              if choice and choice:match("^Yes") then
+                async_cmd({ "wt", "remove", branch, "--force" }, function(force_ok, force_output)
+                  if force_ok then
+                    end_claude_session(branch)
+                    vim.notify("Force removed: " .. branch, vim.log.levels.INFO)
+                  else
+                    vim.notify("Failed to remove:\n" .. force_output, vim.log.levels.ERROR)
+                  end
+                end)
+              end
+            end)
           end)
         end,
         ["ctrl-c"] = function(selected)
