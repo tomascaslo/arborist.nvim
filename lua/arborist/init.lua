@@ -44,16 +44,21 @@ function M.setup(opts)
       :gsub("^%-+", "")
       :gsub("%-+$", "")
 
-    local result = vim.fn.system("wt switch --create " .. vim.fn.shellescape(branch) .. " --no-cd --yes")
-    if vim.v.shell_error ~= 0 then
-      vim.notify("wt switch --create failed:\n" .. result, vim.log.levels.ERROR)
-      return
-    end
-
+    -- Check if worktree already exists
     local path = worktrees.resolve_path(branch)
     if not path then
-      vim.notify("Worktree created but path not found", vim.log.levels.WARN)
-      return
+      local result = vim.fn.system("wt switch --create " .. vim.fn.shellescape(branch) .. " --no-cd --yes")
+      if vim.v.shell_error ~= 0 then
+        vim.notify("wt switch --create failed:\n" .. result, vim.log.levels.ERROR)
+        return
+      end
+      path = worktrees.resolve_path(branch)
+      if not path then
+        vim.notify("Worktree created but path not found", vim.log.levels.WARN)
+        return
+      end
+    else
+      vim.notify("Using existing worktree: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
     end
 
     prompt.open("Claude @ " .. branch, path, function(p)
