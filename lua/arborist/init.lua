@@ -58,8 +58,22 @@ function M.setup(opts)
         return
       end
     else
-      vim.notify("Using existing worktree: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
-      launcher.launch(branch, path)
+      -- Check for existing session on this worktree
+      local existing = sessions.find_by_cwd(path)
+      if existing then
+        if existing.bufnr and vim.api.nvim_buf_is_valid(existing.bufnr) then
+          vim.notify("Reopening session: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
+          launcher.open_task_float(existing)
+        elseif existing.session_id then
+          vim.notify("Resuming session: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
+          launcher.resume(existing)
+        else
+          launcher.launch(branch, path)
+        end
+      else
+        vim.notify("Using existing worktree: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
+        launcher.launch(branch, path)
+      end
       return
     end
 
