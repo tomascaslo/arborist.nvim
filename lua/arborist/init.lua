@@ -49,14 +49,13 @@ function M.setup(opts)
     if not path then
       local result = vim.fn.system("wt switch --create " .. vim.fn.shellescape(branch) .. " --no-cd --yes")
       if vim.v.shell_error ~= 0 then
-        -- Worktree creation failed — launch on current directory instead
-        vim.notify("Worktree not available, launching in current directory", vim.log.levels.INFO, { title = "arborist.nvim" })
-        path = vim.fn.getcwd()
-      else
-        path = worktrees.resolve_path(branch)
-        if not path then
-          path = vim.fn.getcwd()
-        end
+        vim.notify("wt switch --create failed:\n" .. result, vim.log.levels.ERROR)
+        return
+      end
+      path = worktrees.resolve_path(branch)
+      if not path then
+        vim.notify("Worktree created but path not found", vim.log.levels.WARN)
+        return
       end
     else
       -- Check for existing session on this worktree
