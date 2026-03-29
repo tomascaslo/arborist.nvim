@@ -59,6 +59,8 @@ function M.setup(opts)
       end
     else
       vim.notify("Using existing worktree: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
+      launcher.launch(branch, path)
+      return
     end
 
     prompt.open("Claude @ " .. branch, path, function(p)
