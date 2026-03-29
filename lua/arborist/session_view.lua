@@ -12,6 +12,7 @@ local function setup_highlights()
   api.nvim_set_hl(0, "ArboristIdle", { fg = "#6c7086", default = true })
   api.nvim_set_hl(0, "ArboristHeader", { fg = "#cdd6f4", bold = true, default = true })
   api.nvim_set_hl(0, "ArboristSeparator", { fg = "#45475a", default = true })
+  api.nvim_set_hl(0, "ArboristDetached", { fg = "#89b4fa", default = true })
   api.nvim_set_hl(0, "ArboristHelp", { fg = "#6c7086", italic = true, default = true })
 end
 
@@ -19,6 +20,7 @@ local state_display = {
   running = { text = "Running", icon = "●", hl = "ArboristRunning" },
   waiting = { text = "Waiting for input", icon = "◉", hl = "ArboristWaiting" },
   idle = { text = "Idle", icon = "○", hl = "ArboristIdle" },
+  detached = { text = "Detached (resumable)", icon = "◌", hl = "ArboristDetached" },
 }
 
 local function get_state_info(state)
@@ -143,10 +145,11 @@ local function show_help()
     " Arborist Sessions — Help",
     " " .. string.rep("─", 36),
     "",
-    "  <CR>       Open session in float",
+    "  <CR>       Open / resume session",
     "  <C-n>      Next session",
     "  <C-p>      Previous session",
     "  x          End session",
+    "  X          Remove detached session",
     "  r          Refresh",
     "  q          Close view",
     "  ?          Toggle help",
@@ -196,14 +199,17 @@ function M._setup_buffer(bufnr)
   api.nvim_set_option_value("filetype", "arborist-sessions", { buf = bufnr })
   api.nvim_buf_set_name(bufnr, "arborist://sessions")
 
-  -- Open session in float
+  -- Open session in float, or resume if detached
   vim.keymap.set("n", "<CR>", function()
     local _, session = session_idx_at_cursor()
-    if session then
-      require("arborist.notifications").clear_for_cwd(session.worktree_path)
+    if not session then return end
+    require("arborist.notifications").clear_for_cwd(session.worktree_path)
+    if session.state == "detached" and session.session_id then
+      require("arborist.launcher").resume(session)
+    else
       require("arborist.launcher").open_task_float(session)
     end
-  end, { buffer = bufnr, desc = "Open session float" })
+  end, { buffer = bufnr, desc = "Open / resume session" })
 
   -- Navigate between sessions
   vim.keymap.set("n", "<C-n>", function()
@@ -226,26 +232,41 @@ function M._setup_buffer(bufnr)
     jump_to_session(prev_idx)
   end, { buffer = bufnr, desc = "Previous session" })
 
-  -- End session
+  -- End session (live or detached)
   vim.keymap.set("n", "x", function()
-    local idx, session = session_idx_at_cursor()
+    local _, session = session_idx_at_cursor()
     if not session then return end
     vim.ui.select({ "Yes", "No" }, {
       prompt = "End session " .. session.name .. "?",
     }, function(choice)
       if choice ~= "Yes" then return end
-      -- Kill the terminal job
+      local sessions_mod = require("arborist.sessions")
       if session.bufnr and api.nvim_buf_is_valid(session.bufnr) then
         local chan = vim.bo[session.bufnr].channel
         if chan and chan > 0 then
           pcall(vim.fn.jobstop, chan)
         end
         pcall(api.nvim_buf_delete, session.bufnr, { force = true })
+        sessions_mod.remove_by_bufnr(session.bufnr)
+      elseif session.session_id then
+        sessions_mod.remove_by_session_id(session.session_id)
       end
       require("arborist.notifications").clear_for_cwd(session.worktree_path)
-      require("arborist.sessions").remove_by_bufnr(session.bufnr)
     end)
   end, { buffer = bufnr, desc = "End session" })
+
+  -- Remove detached session (no confirmation)
+  vim.keymap.set("n", "X", function()
+    local _, session = session_idx_at_cursor()
+    if not session then return end
+    if session.state ~= "detached" then
+      vim.notify("Use 'x' to end live sessions", vim.log.levels.INFO)
+      return
+    end
+    local sessions_mod = require("arborist.sessions")
+    sessions_mod.remove_by_session_id(session.session_id)
+    require("arborist.notifications").clear_for_cwd(session.worktree_path)
+  end, { buffer = bufnr, desc = "Remove detached session" })
 
   -- Help
   vim.keymap.set("n", "?", show_help, { buffer = bufnr, desc = "Show help" })

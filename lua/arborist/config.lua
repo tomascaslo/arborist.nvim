@@ -55,6 +55,8 @@ M.defaults = {
       "Bash(git reset --hard *)",
     },
   },
+  persist_sessions = true,          -- persist sessions to disk for resume across restarts
+  session_timeout = 60 * 60 * 24,   -- 24h — stale detached sessions older than this are pruned
   notification_timeout = 3000, -- ms
   keys = {
     worktrees = "<leader>rw",     -- a[r]borist [w]orktrees

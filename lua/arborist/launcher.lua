@@ -109,6 +109,43 @@ function M.launch(branch, worktree_path, prompt)
   })
 end
 
+--- Resume a detached session by launching claude --resume <session_id>.
+function M.resume(session)
+  if not session or not session.session_id then
+    vim.notify("No session ID to resume", vim.log.levels.WARN)
+    return
+  end
+
+  local sessions_mod = require("arborist.sessions")
+  local buf, win = create_float()
+  local cwd = session.worktree_path or vim.fn.getcwd()
+
+  -- Build resume command with settings
+  local cmd = { "claude", "--resume", session.session_id }
+  local arborist = require("arborist")
+  if arborist.settings_path then
+    table.insert(cmd, "--settings")
+    table.insert(cmd, arborist.settings_path)
+  end
+
+  vim.fn.termopen(cmd, {
+    cwd = cwd,
+    on_exit = function()
+      sessions_mod.remove_by_bufnr(buf)
+    end,
+  })
+
+  setup_close_key(buf, win)
+  vim.cmd("startinsert")
+
+  -- Update the existing session entry with the new buffer
+  session.bufnr = buf
+  session.state = "running"
+  session.last_updated = os.time()
+  sessions_mod._persist()
+  sessions_mod._notify_view()
+end
+
 function M.pick_instance()
   local sessions = require("arborist.sessions")
   local all = sessions.get_all()

@@ -18,6 +18,11 @@ function M.setup(opts)
   -- Register global hook receivers
   sessions.setup_globals()
 
+  -- Load persisted sessions if enabled
+  if cfg.persist_sessions then
+    sessions.load_persisted()
+  end
+
   -- Generate settings file with hooks for --settings flag
   M._write_settings()
 
@@ -61,6 +66,11 @@ function M.setup(opts)
     session_view.toggle()
   end, { desc = "Toggle Claude sessions view" })
 
+  -- :ClaudeCleanup — remove stale detached sessions
+  api.nvim_create_user_command("ClaudeCleanup", function()
+    sessions.cleanup()
+  end, { desc = "Clean up stale detached sessions" })
+
   -- Keymaps
   vim.keymap.set("n", cfg.keys.worktrees, worktrees.fzf_picker, { desc = "Worktrees (fzf)" })
   vim.keymap.set("n", cfg.keys.new_worktree, ":ClaudeNew ", { desc = "New worktree + Claude" })
@@ -95,6 +105,8 @@ function M._write_settings()
       Stop = hook_entry,
       PostToolUse = hook_entry,
       Notification = hook_entry,
+      SessionStart = hook_entry,
+      SessionEnd = hook_entry,
     },
   }
 

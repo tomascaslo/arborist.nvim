@@ -59,7 +59,9 @@ An arborist tends to trees — this plugin tends to your git worktrees, launchin
           "Bash(git reset --hard *)",
         },
       },
-      notification_timeout = 3000, -- ms
+      persist_sessions = true,        -- persist sessions for resume across restarts
+      session_timeout = 60 * 60 * 24, -- 24h — prune stale detached sessions
+      notification_timeout = 3000,    -- ms
       keys = {
         worktrees = "<leader>rw",
         new_worktree = "<leader>rn",
@@ -127,9 +129,10 @@ Shows an icon + session count when Claude sessions are active. Turns yellow when
 
 | Key | Action |
 |-----|--------|
-| `enter` | Open session in floating terminal |
+| `enter` | Open session / resume detached session |
 | `ctrl-n` / `ctrl-p` | Navigate between sessions |
 | `x` | End session (keeps worktree) |
+| `X` | Remove detached session (no confirmation) |
 | `r` | Refresh |
 | `q` | Close |
 | `?` | Show help |
@@ -140,6 +143,17 @@ Shows an icon + session count when Claude sessions are active. Turns yellow when
 |---------|-------------|
 | `:ClaudeNew [name]` | Create worktree + launch Claude. Slugifies names: `hello world` → `hello-world` |
 | `:ClaudeSessions` | Toggle the session dashboard |
+| `:ClaudeCleanup` | Remove stale detached sessions |
+
+## Session persistence
+
+Sessions are persisted to disk (`stdpath("data")/arborist/sessions.json`) so you can resume them after restarting Neovim. When a session's `session_id` is captured (via the `SessionStart` hook), it becomes resumable.
+
+Detached sessions appear in the session dashboard with a "Detached (resumable)" state. Press `enter` to resume with `claude --resume <session_id>`.
+
+Stale sessions older than `session_timeout` (default 24h) are automatically pruned on startup. Run `:ClaudeCleanup` to manually clean up.
+
+Disable with `persist_sessions = false` in setup.
 
 ## How it works
 
