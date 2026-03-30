@@ -11,6 +11,7 @@ function M.open(title, worktree_path, on_submit)
   local col = math.floor((vim.o.columns - width) / 2)
 
   local buf = api.nvim_create_buf(false, true)
+  vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].filetype = "markdown"
   vim.bo[buf].bufhidden = "wipe"
 
