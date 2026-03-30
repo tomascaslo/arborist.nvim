@@ -1,4 +1,6 @@
 # arborist.nvim
+<img width="2752" height="1536" alt="Gemini_Generated_Image_7okcp27okcp27okc" src="https://github.com/user-attachments/assets/78900244-1cf4-4f3d-b47e-0ce88325f4ab" />
+
 
 Manage multiple [Claude Code](https://claude.ai/claude-code) sessions across git worktrees from inside Neovim.
 
