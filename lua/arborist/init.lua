@@ -36,8 +36,8 @@ function M.setup(opts)
       end
     end
 
-    -- Slugify: "hello world" -> "hello-world"
-    branch = branch:lower()
+    -- Slugify: "hello world" -> "hello-world" (preserves casing)
+    branch = branch
       :gsub("%s+", "-")
       :gsub("[^%w%-_/]", "")
       :gsub("%-%-+", "-")
