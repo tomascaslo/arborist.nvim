@@ -24,9 +24,14 @@ end
 
 M.system_from_root = system_from_root
 
---- Run a command asynchronously via vim.system() and call on_done(ok, output).
+--- Run a command asynchronously via vim.system() from the repo root.
 local function async_cmd(cmd, on_done)
-  vim.system(cmd, { text = true }, function(result)
+  local root = repo_root()
+  local opts = { text = true }
+  if root then
+    opts.cwd = root
+  end
+  vim.system(cmd, opts, function(result)
     vim.schedule(function()
       on_done(result.code == 0, vim.trim(result.stdout or result.stderr or ""))
     end)
