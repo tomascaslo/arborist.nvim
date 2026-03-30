@@ -208,6 +208,13 @@ end
 function M.setup_globals()
   _G._arborist_hook_stop = function(cwd, session_id)
     vim.schedule(function()
+      M.set_state(cwd, session_id, "idle")
+      require("arborist.notifications").push(cwd, session_id)
+    end)
+  end
+
+  _G._arborist_hook_permission_request = function(cwd, session_id)
+    vim.schedule(function()
       M.set_state(cwd, session_id, "waiting")
       require("arborist.notifications").push(cwd, session_id)
     end)

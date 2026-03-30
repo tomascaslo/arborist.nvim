@@ -91,6 +91,9 @@ elseif event == "Notification" then
   local title = lua_escape(data.title or "")
   broadcast('_arborist_hook_notification("' .. cwd .. '", "' .. session_id .. '", "' .. message .. '", "' .. title .. '")')
 
+elseif event == "PermissionRequest" then
+  broadcast('_arborist_hook_permission_request("' .. cwd .. '", "' .. session_id .. '")')
+
 elseif event == "SessionStart" then
   local source = lua_escape(data.source or "")
   broadcast('_arborist_hook_session_start("' .. cwd .. '", "' .. session_id .. '", "' .. source .. '")')

@@ -126,6 +126,7 @@ function M._write_settings()
       Stop = hook_entry,
       PostToolUse = hook_entry,
       Notification = hook_entry,
+      PermissionRequest = hook_entry,
       SessionStart = hook_entry,
       SessionEnd = hook_entry,
     },

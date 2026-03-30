@@ -18,8 +18,8 @@ end
 
 local state_display = {
   running = { text = "Running", icon = "●", hl = "ArboristRunning" },
-  waiting = { text = "Waiting for input", icon = "◉", hl = "ArboristWaiting" },
-  idle = { text = "Idle", icon = "○", hl = "ArboristIdle" },
+  waiting = { text = "Needs input", icon = "◉", hl = "ArboristWaiting" },
+  idle = { text = "Done", icon = "○", hl = "ArboristIdle" },
   detached = { text = "Detached (resumable)", icon = "◌", hl = "ArboristDetached" },
 }
 

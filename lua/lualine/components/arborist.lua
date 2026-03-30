@@ -10,6 +10,7 @@ function component:init(options)
 	end
 	self.options.icon = self.options.icon or icon
 	self.options.waiting_color = self.options.waiting_color or { fg = "#f9e2af" }
+	self.options.idle_color = self.options.idle_color or { fg = "#a6e3a1" }
 end
 
 function component:update_status()
@@ -24,15 +25,23 @@ function component:update_status()
 	end
 
 	local waiting = 0
+	local idle = 0
 	for _, s in ipairs(all) do
 		if s.state == "waiting" then
 			waiting = waiting + 1
+		elseif s.state == "idle" then
+			idle = idle + 1
 		end
 	end
 
 	if waiting > 0 then
 		self.options.color = self.options.waiting_color
 		return tostring(#all) .. " (" .. waiting .. "!)"
+	end
+
+	if idle > 0 then
+		self.options.color = self.options.idle_color
+		return tostring(#all)
 	end
 
 	self.options.color = nil
