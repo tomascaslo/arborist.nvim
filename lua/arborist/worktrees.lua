@@ -39,30 +39,40 @@ local function async_cmd(cmd, on_done)
   end)
 end
 
+--- Match a branch name against a list of worktree entries.
+--- Exported for testing.
+function M.match_worktree(trees, branch)
+  -- Pass 1: exact branch match (highest priority)
+  for _, t in ipairs(trees) do
+    if t.path and t.branch == branch then
+      return t.path
+    end
+  end
+  -- Pass 2: directory name match
+  for _, t in ipairs(trees) do
+    if t.path then
+      local dirname = vim.fn.fnamemodify(t.path, ":t")
+      if dirname == branch then
+        return t.path
+      end
+    end
+  end
+  -- Pass 3: suffix match (e.g. refs/heads/branch)
+  for _, t in ipairs(trees) do
+    if t.path and t.branch and t.branch:match("/" .. vim.pesc(branch) .. "$") then
+      return t.path
+    end
+  end
+  return nil
+end
+
 function M.resolve_path(branch)
   local json = system_from_root("wt list --format=json 2>/dev/null")
   local ok, trees = pcall(vim.json.decode, json)
   if not ok or type(trees) ~= "table" then
     return nil
   end
-  for _, t in ipairs(trees) do
-    if t.path then
-      -- Exact match by branch name
-      if t.branch == branch then
-        return t.path
-      end
-      -- Match by directory name (wt names worktree dirs after the branch)
-      local dirname = vim.fn.fnamemodify(t.path, ":t")
-      if dirname == branch then
-        return t.path
-      end
-      -- Suffix match (e.g. branch="my-feature" matches t.branch="refs/heads/my-feature")
-      if t.branch and t.branch:match("/" .. vim.pesc(branch) .. "$") then
-        return t.path
-      end
-    end
-  end
-  return nil
+  return M.match_worktree(trees, branch)
 end
 
 local function end_claude_session(branch)
