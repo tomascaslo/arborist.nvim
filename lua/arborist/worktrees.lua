@@ -40,7 +40,7 @@ local function async_cmd(cmd, on_done)
 end
 
 function M.resolve_path(branch)
-  local json = system_from_root("wt list --format=json")
+  local json = system_from_root("wt list --format=json 2>/dev/null")
   local ok, trees = pcall(vim.json.decode, json)
   if not ok or type(trees) ~= "table" then
     return nil
