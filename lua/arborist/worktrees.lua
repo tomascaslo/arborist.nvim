@@ -33,7 +33,8 @@ local function async_cmd(cmd, on_done)
   end
   vim.system(cmd, opts, function(result)
     vim.schedule(function()
-      on_done(result.code == 0, vim.trim(result.stdout or result.stderr or ""))
+      local output = (result.stdout or "") .. (result.stderr or "")
+      on_done(result.code == 0, vim.trim(output))
     end)
   end)
 end
@@ -122,14 +123,17 @@ function M.fzf_picker()
           if not branch then
             return
           end
-          async_cmd({ "wt", "switch", branch, "--no-cd" }, function(ok)
+          async_cmd({ "wt", "switch", branch, "--no-cd" }, function(ok, output)
             if not ok then
-              vim.notify("Failed to switch to " .. branch, vim.log.levels.ERROR)
+              vim.notify("Failed to switch to " .. branch .. ": " .. output, vim.log.levels.ERROR)
               return
             end
             local path = M.resolve_path(branch)
             if path then
               vim.cmd("cd " .. vim.fn.fnameescape(path))
+              vim.notify("Switched to " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
+            else
+              vim.notify("Switched but could not resolve path for " .. branch, vim.log.levels.WARN)
             end
           end)
         end,
