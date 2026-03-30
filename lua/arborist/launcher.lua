@@ -149,7 +149,7 @@ function M.resume(session)
 
   -- Update the existing session entry with the new buffer
   session.bufnr = buf
-  session.state = "running"
+  session.state = "idle"
   session.last_updated = os.time()
   sessions_mod._persist()
   sessions_mod._notify_view()
