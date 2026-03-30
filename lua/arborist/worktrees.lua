@@ -16,8 +16,16 @@ function M.resolve_path(branch)
     return nil
   end
   for _, t in ipairs(trees) do
-    if t.branch == branch and t.path then
-      return t.path
+    if t.path then
+      -- Match by branch name
+      if t.branch == branch then
+        return t.path
+      end
+      -- Match by directory name (wt names worktree dirs after the branch)
+      local dirname = vim.fn.fnamemodify(t.path, ":t")
+      if dirname == branch then
+        return t.path
+      end
     end
   end
   return nil
