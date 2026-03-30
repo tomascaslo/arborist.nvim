@@ -23,6 +23,7 @@ local function system_from_root(cmd)
 end
 
 M.system_from_root = system_from_root
+M.repo_root = repo_root
 
 --- Run a command asynchronously via vim.system() from the repo root.
 local function async_cmd(cmd, on_done)
