@@ -8,11 +8,12 @@ An arborist tends to trees — this plugin tends to your git worktrees, launchin
 
 - **Worktree picker** — fzf-lua powered picker with live preview showing git status and recent commits
 - **Floating prompt editor** — write multi-line prompts with `@path` file/directory completion before launching Claude
-- **Session dashboard** — vertical split view showing all active Claude sessions with live state (Running, Waiting for input)
-- **Hook system** — Lua-based hook handler (runs via `nvim -l`) handles Stop, PostToolUse, and Notification events
+- **Session dashboard** — vertical split view showing all active Claude sessions with live state (Running, Idle, Needs input, Detached)
+- **Session persistence** — resume sessions across Neovim restarts via `claude --resume`
+- **Hook system** — Lua-based hook handler (runs via `nvim -l`) handles Stop, PostToolUse, PermissionRequest, Notification, SessionStart, and SessionEnd events
 - **Auto-reload buffers** — when Claude edits files, open buffers auto-reload via `checktime`
-- **Notification queue** — Claude's Stop hook pushes notifications when Claude finishes and is waiting for input
-- **Lualine integration** — statusline component showing active session count with waiting indicator
+- **Notification queue** — pushes notifications when Claude finishes or needs permission
+- **Lualine integration** — statusline component showing active session count (yellow when permission needed, green when idle)
 - **Tool sandboxing** — configurable allowed/disallowed tools so Claude can't `rm -rf` or `git push` from worktree sessions
 - **Branch slugification** — `:ClaudeNew hello world` creates a `hello-world` worktree automatically
 
@@ -94,7 +95,7 @@ require("lualine").setup({
 })
 ```
 
-Shows an icon + session count when Claude sessions are active. Turns yellow when any session is waiting for input.
+Shows an icon + session count when Claude sessions are active. Yellow when a session needs permission, green when all are idle.
 
 ## Usage
 
@@ -171,18 +172,20 @@ Disable with `persist_sessions = false` in setup.
                                      │  (interactive)  │
                                      └────────┬────────┘
                                               │ hooks (nvim -l)
-                           ┌──────────────────┼──────────────────┐
-                           │                  │                  │
-                  ┌────────▼────────┐ ┌───────▼───────┐ ┌───────▼───────┐
-                  │  Stop           │ │  PostToolUse  │ │  Notification │
-                  │  → "waiting"    │ │  → "running"  │ │  → vim.notify │
-                  │  → notify queue │ │  → checktime  │ │               │
-                  └────────┬────────┘ └───────────────┘ └───────────────┘
-                           │
-                  ┌────────▼────────┐     ┌─────────────┐
-                  │  session view   │     │   lualine   │
-                  │  (live state)   │     │  component  │
-                  └─────────────────┘     └─────────────┘
+                    ┌─────────────┬───────────┼───────────┬──────────────┐
+                    │             │           │           │              │
+           ┌────────▼───────┐ ┌──▼────────┐ ┌▼────────┐ ┌▼───────────┐ ┌▼───────────┐
+           │ SessionStart   │ │ Stop      │ │ PostTool│ │ Permission │ │ SessionEnd │
+           │ → bind id      │ │ → "idle"  │ │ → "run" │ │ → "waiting"│ │ → cleanup  │
+           └────────────────┘ │ → notify  │ │ → check │ │ → notify   │ └────────────┘
+                              └─────┬─────┘ └─────────┘ └────────────┘
+                                    │
+                  ┌─────────────────┼─────────────────┐
+                  │                                   │
+         ┌────────▼────────┐                 ┌────────▼────┐
+         │  session view   │                 │   lualine   │
+         │  (live state)   │                 │  component  │
+         └─────────────────┘                 └─────────────┘
 ```
 
 ## Tests
