@@ -47,13 +47,17 @@ function M.resolve_path(branch)
   end
   for _, t in ipairs(trees) do
     if t.path then
-      -- Match by branch name
+      -- Exact match by branch name
       if t.branch == branch then
         return t.path
       end
       -- Match by directory name (wt names worktree dirs after the branch)
       local dirname = vim.fn.fnamemodify(t.path, ":t")
       if dirname == branch then
+        return t.path
+      end
+      -- Suffix match (e.g. branch="my-feature" matches t.branch="refs/heads/my-feature")
+      if t.branch and t.branch:match("/" .. vim.pesc(branch) .. "$") then
         return t.path
       end
     end
