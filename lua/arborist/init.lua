@@ -51,14 +51,17 @@ function M.setup(opts)
       local opts = { text = true }
       if root then opts.cwd = root end
 
-      -- Try switching to existing branch (creates worktree if needed, --clobber handles stale dirs)
+      -- Prune stale worktree registrations before switching
+      vim.system({ "git", "worktree", "prune" }, opts):wait()
+
+      -- Try switching to existing branch (creates worktree if needed)
       local r = vim.system({ "wt", "switch", branch, "--no-cd", "--yes", "--clobber" }, opts):wait()
       if r.code ~= 0 then
-        local first_err = vim.trim((r.stdout or "") .. (r.stderr or ""))
         -- Branch doesn't exist — create it
         r = vim.system({ "wt", "switch", "--create", branch, "--no-cd", "--yes" }, opts):wait()
         if r.code ~= 0 then
-          vim.notify("wt switch (clobber) failed:\n" .. first_err, vim.log.levels.ERROR)
+          local err = vim.trim((r.stdout or "") .. (r.stderr or ""))
+          vim.notify("wt switch failed:\n" .. err, vim.log.levels.ERROR)
           return
         end
       end
