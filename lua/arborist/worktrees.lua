@@ -1,5 +1,29 @@
 local M = {}
 
+--- Find the repo root directory (works from any worktree).
+local function repo_root()
+  local common = vim.trim(vim.fn.system("git rev-parse --git-common-dir 2>/dev/null"))
+  if common ~= "" and common ~= ".git" then
+    return vim.fn.fnamemodify(common, ":h")
+  end
+  local toplevel = vim.trim(vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"))
+  if toplevel ~= "" then
+    return toplevel
+  end
+  return nil
+end
+
+--- Run a shell command from the repo root.
+local function system_from_root(cmd)
+  local root = repo_root()
+  if root then
+    return vim.fn.system("cd " .. vim.fn.shellescape(root) .. " && " .. cmd)
+  end
+  return vim.fn.system(cmd)
+end
+
+M.system_from_root = system_from_root
+
 --- Run a command asynchronously via vim.system() and call on_done(ok, output).
 local function async_cmd(cmd, on_done)
   vim.system(cmd, { text = true }, function(result)
@@ -10,7 +34,7 @@ local function async_cmd(cmd, on_done)
 end
 
 function M.resolve_path(branch)
-  local json = vim.fn.system("wt list --format=json")
+  local json = system_from_root("wt list --format=json")
   local ok, trees = pcall(vim.json.decode, json)
   if not ok or type(trees) ~= "table" then
     return nil

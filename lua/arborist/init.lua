@@ -47,7 +47,7 @@ function M.setup(opts)
     -- Check if worktree already exists
     local path = worktrees.resolve_path(branch)
     if not path then
-      local result = vim.fn.system("wt switch --create " .. vim.fn.shellescape(branch) .. " --no-cd --yes")
+      local result = worktrees.system_from_root("wt switch --create " .. vim.fn.shellescape(branch) .. " --no-cd --yes")
       if vim.v.shell_error ~= 0 then
         vim.notify("wt switch --create failed:\n" .. result, vim.log.levels.ERROR)
         return
