@@ -14,6 +14,7 @@ function M.open(title, worktree_path, on_submit)
   vim.bo[buf].buftype = "acwrite"
   vim.bo[buf].filetype = "markdown"
   vim.bo[buf].bufhidden = "wipe"
+  api.nvim_buf_set_name(buf, "arborist://prompt")
 
   local win = api.nvim_open_win(buf, true, {
     relative = "editor",
