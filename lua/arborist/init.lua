@@ -44,7 +44,7 @@ function M.setup(opts)
       :gsub("^%-+", "")
       :gsub("%-+$", "")
 
-    -- Check if worktree already exists
+    -- Resolve or create worktree
     local path = worktrees.resolve_path(branch)
     if not path then
       local result = worktrees.system_from_root("wt switch --create " .. vim.fn.shellescape(branch) .. " --no-cd --yes")
@@ -57,26 +57,9 @@ function M.setup(opts)
         vim.notify("Worktree created but path not found", vim.log.levels.WARN)
         return
       end
-    else
-      -- Check for existing session on this worktree
-      local existing = sessions.find_by_cwd(path)
-      if existing then
-        if existing.bufnr and vim.api.nvim_buf_is_valid(existing.bufnr) then
-          vim.notify("Reopening session: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
-          launcher.open_task_float(existing)
-        elseif existing.session_id then
-          vim.notify("Resuming session: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
-          launcher.resume(existing)
-        else
-          launcher.launch(branch, path)
-        end
-      else
-        vim.notify("Using existing worktree: " .. branch, vim.log.levels.INFO, { title = "arborist.nvim" })
-        launcher.launch(branch, path)
-      end
-      return
     end
 
+    -- Always open prompt editor for a fresh session
     prompt.open("Claude @ " .. branch, path, function(p)
       launcher.launch(branch, path, p)
     end)

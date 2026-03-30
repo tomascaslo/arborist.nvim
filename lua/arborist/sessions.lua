@@ -151,6 +151,17 @@ function M.find_by_cwd(cwd)
   return nil
 end
 
+function M.find_all_by_cwd(cwd)
+  local results = {}
+  local dirname = vim.fn.fnamemodify(cwd, ":t")
+  for _, s in ipairs(M._sessions) do
+    if s.worktree_path == cwd or s.name == "claude:" .. dirname then
+      table.insert(results, s)
+    end
+  end
+  return results
+end
+
 function M.find_by_session_id(sid)
   if not sid or sid == "" then return nil end
   for _, s in ipairs(M._sessions) do

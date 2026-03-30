@@ -41,9 +41,13 @@ function M.open_queue()
     local sessions = require("arborist.sessions")
     local launcher = require("arborist.launcher")
 
-    local match = sessions.find_by_cwd(entry.cwd)
+    local match = sessions.find_by_session_id(entry.session_id) or sessions.find_by_cwd(entry.cwd)
     if match then
-      launcher.open_task_float(match)
+      if match.state == "detached" and match.session_id then
+        launcher.resume(match)
+      else
+        launcher.open_task_float(match)
+      end
     else
       vim.notify("No matching Claude session found for " .. entry.dirname, vim.log.levels.WARN)
     end
